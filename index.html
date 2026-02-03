@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>弾性体移動特性シミュレーター</title>
+    <style>
+        :root { --main: #8d6e63; --accent: #ffd700; --bg: #fff9c4; }
+        body { margin: 0; overflow: hidden; background: #eceff1; display: flex; justify-content: center; align-items: center; height: 100vh; font-family: sans-serif; }
+        
+        /* 認証画面 */
+        #auth-layer { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #fff; z-index: 100; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        .auth-box { border: 1px solid #ccc; padding: 30px; border-radius: 8px; text-align: center; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        input { padding: 10px; width: 200px; border: 1px solid #999; border-radius: 4px; margin: 10px 0; }
+
+        /* ゲーム本体容器 */
+        #main-content { display: none; }
+        #game-container { position: relative; width: 400px; height: 600px; box-shadow: 0 20px 50px rgba(0,0,0,0.4); border-radius: 20px; overflow: hidden; background: #e1f5fe; }
+        canvas { display: block; background: linear-gradient(#81d4fa, #e1f5fe); }
+        
+        .layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; flex-direction: column; box-sizing: border-box; }
+        .stat-box { background: rgba(255,255,255,0.9); padding: 8px 15px; border-radius: 12px; border: 2px solid var(--main); color: var(--main); font-weight: bold; font-size: 16px; margin: 10px; }
+
+        /* メニュー */
+        #menu-screen { background: rgba(255,255,255,0.95); z-index: 10; align-items: center; justify-content: center; text-align: center; }
+        .btn { background: #ff7043; color: white; padding: 15px 30px; border-radius: 30px; border: none; font-size: 18px; font-weight: bold; cursor: pointer; margin: 8px; width: 240px; }
+        
+        /* ショップ（研究室） */
+        #shop-screen { background: var(--bg); z-index: 20; display: none; padding: 20px; align-items: center; justify-content: center; }
+        .shop-item { background: white; border: 2px solid var(--main); border-radius: 15px; padding: 15px; margin: 10px; width: 300px; display: flex; justify-content: space-between; align-items: center; }
+        .buy-btn { background: #4caf50; color: white; border: none; padding: 10px 15px; border-radius: 8px; cursor: pointer; }
+    </style>
+</head>
+<body>
+
+    <!-- 偽装ログイン -->
+    <div id="auth-layer">
+        <div class="auth-box">
+            <h2 style="font-size:16px; color:#555;">研究員専用データベース</h2>
+            <input type="password" id="passInput" placeholder="認証コードを入力">
+            <br>
+            <button onclick="checkPass()" style="padding:8px 20px; cursor:pointer;">ログイン</button>
+            <p id="err" style="color:red; font-size:12px;"></p>
+        </div>
+    </div>
+
+    <!-- 本体 -->
+    <div id="main-content">
+        <div id="game-container">
+            <canvas id="gameCanvas"></canvas>
+
+            <div id="menu-screen" class="layer">
+                <h1 style="color:#5d4037; font-size:24px;">Elastic_Sim v2.0</h1>
+                <div class="stat-box">累計採取リソース: <span id="totalCoinsMenu">0</span></div>
+                <div style="font-size:14px; margin-bottom:20px;">最大到達係数: <span id="bestScoreMenu">0</span></div>
+                <button class="btn" onclick="startGame()">シミュレーション開始</button>
+                <button class="btn" style="background:#ffd54f; color:#5d4037;" onclick="openShop()">パラメーター研究室</button>
+            </div>
+
+            <div id="shop-screen" class="layer">
+                <h2>研究アップグレード</h2>
+                <div class="shop-item">
+                    <div>
+                        <b>垂直反発力 Lv.<span id="jumpLvDisplay">1</span></b><br>
+                        <small>必要リソース: <span id="jumpCost">500</span></small>
+                    </div>
+                    <button class="buy-btn" onclick="buyUpgrade('jump')">更新</button>
+                </div>
+                <div class="shop-item">
+                    <div><b>黄金の弾性体</b><br><small>必要リソース: 2000</small></div>
+                    <button class="buy-btn" id="skinBtn" onclick="buyUpgrade('skin')">適用</button>
+                </div>
+                <button class="btn" style="background:#90a4ae;" onclick="closeShop()">戻る</button>
+            </div>
+
+            <div id="ui-layer" class="layer" style="display:none; pointer-events:none;">
+                <div style="display:flex; justify-content:space-between; width:100%;">
+                    <div class="stat-box">DATA: <span id="score">0</span></div>
+                    <div class="stat-box">RESOURCE: <span id="sessionCoins">0</span></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+<script>
+// --- 認証システム ---
+function checkPass() {
+    if(document.getElementById('passInput').value === 'neba72') {
+        document.getElementById('auth-layer').style.display = 'none';
+        document.getElementById('main-content').style.display = 'block';
+        updateHome();
+    } else {
+        document.getElementById('err').innerText = "コードが違います";
+    }
+}
+
+// --- ゲームロジック ---
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+canvas.width = 400; canvas.height = 600;
+
+let data = {
+    best: parseInt(localStorage.getItem('n_best')) || 0,
+    totalCoins: parseInt(localStorage.getItem('n_coins')) || 0,
+    jumpLv: parseInt(localStorage.getItem('n_jump')) || 1,
+    hasGold: localStorage.getItem('n_gold') === 'true'
+};
+
+const state = { active: false, score: 0, coins: 0, platforms: [], items: [] };
+const player = { x: 175, y: 500, w: 50, h: 60, dy: 0, vx: 0, gravity: 0.45, squish: 1 };
+const keys = {};
+
+window.addEventListener('keydown', e => keys[e.code] = true);
+window.addEventListener('keyup', e => keys[e.code] = false);
+
+function updateHome() {
+    document.getElementById('totalCoinsMenu').innerText = data.totalCoins;
+    document.getElementById('bestScoreMenu').innerText = data.best;
+    document.getElementById('jumpLvDisplay').innerText = data.jumpLv;
+    document.getElementById('jumpCost').innerText = data.jumpLv * 500;
+    if(data.hasGold) { document.getElementById('skinBtn').innerText = "適用済"; document.getElementById('skinBtn').disabled = true; }
+}
+
+function openShop() { document.getElementById('shop-screen').style.display = 'flex'; }
+function closeShop() { document.getElementById('shop-screen').style.display = 'none'; }
+
+function buyUpgrade(type) {
+    if(type === 'jump') {
+        let cost = data.jumpLv * 500;
+        if(data.totalCoins >= cost) { data.totalCoins -= cost; data.jumpLv++; save(); updateHome(); }
+    } else if(type === 'skin') {
+        if(data.totalCoins >= 2000) { data.totalCoins -= 2000; data.hasGold = true; save(); updateHome(); }
+    }
+}
+
+function save() {
+    localStorage.setItem('n_best', data.best);
+    localStorage.setItem('n_coins', data.totalCoins);
+    localStorage.setItem('n_jump', data.jumpLv);
+    localStorage.setItem('n_gold', data.hasGold);
+}
+
+function startGame() {
+    document.getElementById('menu-screen').style.display = 'none';
+    document.getElementById('ui-layer').style.display = 'block';
+    state.active = true; state.score = 0; state.coins = 0;
+    state.platforms = [{x:0, y:560, w:400, h:40, speed:0}];
+    for(let i=1; i<7; i++) state.platforms.push(createPlatform(560-i*110));
+    player.y = 500; player.dy = 0;
+}
+
+function createPlatform(y) {
+    let w = 80;
+    return { x: Math.random()*(400-w), y, w, h: 15, speed: state.score > 500 ? (Math.random()-0.5)*4 : 0 };
+}
+
+function update() {
+    if(!state.active) return;
+    if(Math.random() < 0.01) state.items.push({x: Math.random()*380, y:-20, vy:2});
+
+    if(keys['ArrowLeft']) player.vx = -6; else if(keys['ArrowRight']) player.vx = 6; else player.vx *= 0.8;
+    player.x += player.vx;
+    player.dy += player.gravity; player.y += player.dy;
+    player.squish = player.dy < 0 ? 0.7 : 1.1;
+
+    // 足場判定
+    if(player.dy > 0) {
+        state.platforms.forEach(p => {
+            p.x += p.speed; if(p.x < 0 || p.x + p.w > 400) p.speed *= -1;
+            if(player.x+40 > p.x && player.x+10 < p.x+p.w && player.y+60 > p.y && player.y+60 < p.y+20) {
+                player.dy = -14 - (data.jumpLv*0.5);
+                player.squish = 1.5;
+            }
+        });
+    }
+
+    // アイテム
+    for(let i=state.items.length-1; i>=0; i--){
+        let it = state.items[i]; it.y += it.vy;
+        if(Math.abs(player.x+25-it.x)<30 && Math.abs(player.y+30-it.y)<40){
+            state.coins += 10; state.items.splice(i,1);
+        }
+    }
+
+    if(player.y < 250) {
+        let diff = 250 - player.y; player.y = 250; state.score += 1;
+        state.platforms.forEach(p => { p.y += diff; if(p.y > 600) Object.assign(p, createPlatform(-20)); });
+        state.items.forEach(it => it.y += diff);
+    }
+    if(player.y > 650) { state.active = false; data.totalCoins += state.coins; if(state.score > data.best) data.best = state.score; save(); document.getElementById('menu-screen').style.display = 'flex'; updateHome(); }
+}
+
+function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    state.platforms.forEach(p => { ctx.fillStyle = '#8d6e63'; ctx.fillRect(p.x, p.y, p.w, p.h); });
+    state.items.forEach(it => { ctx.fillStyle = 'gold'; ctx.beginPath(); ctx.arc(it.x, it.y, 8, 0, 7); ctx.fill(); });
+
+    ctx.save();
+    ctx.translate(player.x+25, player.y+60);
+    ctx.scale(1/player.squish, player.squish);
+    ctx.fillStyle = data.hasGold ? 'gold' : '#8d6e63';
+    ctx.beginPath();
+    ctx.roundRect(-25, -60, 50, 60, 10);
+    ctx.fill();
+    // 目
+    ctx.fillStyle = 'white'; ctx.beginPath(); ctx.arc(-10,-40,5,0,7); ctx.arc(10,-40,5,0,7); ctx.fill();
+    ctx.fillStyle = 'black'; ctx.beginPath(); ctx.arc(-10,-40,2,0,7); ctx.arc(10,-40,2,0,7); ctx.fill();
+    ctx.restore();
+}
+
+function loop() {
+    update(); draw();
+    document.getElementById('score').innerText = state.score;
+    document.getElementById('sessionCoins').innerText = state.coins;
+    requestAnimationFrame(loop);
+}
+loop();
+</script>
+</body>
+</html>
