@@ -2,114 +2,129 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <title>Multi-Phase Physical Kinematics Analyzer v20.1</title>
+    <title>Global Strategic Physics Research (GSPR) - Multi-Sector Suite</title>
     <style>
-        :root { --main: #00ff41; --sub: #008f11; --alert: #ff1100; --bg: #050505; }
-        body { margin:0; background:var(--bg); color:var(--main); font-family:'Share Tech Mono', monospace; overflow:hidden; display:flex; font-size: 12px; }
+        :root { --neon: #00ff41; --sub: #008f11; --danger: #ff1100; --bg: #050505; --panel: #0d0d0d; }
+        body { margin:0; background:var(--bg); color:var(--neon); font-family:'Share Tech Mono', 'Consolas', monospace; overflow:hidden; display:flex; font-size: 12px; }
         
-        /* 起動・認証 */
+        /* 認証・ログイン層 */
         #auth-gate { position:fixed; inset:0; background:#000; z-index:10000; display:flex; flex-direction:column; align-items:center; justify-content:center; }
-        #pw { background:transparent; border:1px solid var(--main); color:var(--main); padding:10px; text-align:center; font-size:24px; width:300px; outline:none; box-shadow:0 0 15px var(--sub); }
+        .login-box { border:1px solid var(--neon); padding:40px; background:#050505; text-align:center; box-shadow:0 0 30px var(--sub); }
+        .input-line { background:transparent; border:none; border-bottom:1px solid var(--neon); color:var(--neon); padding:10px; text-align:center; font-size:18px; width:280px; outline:none; margin:15px 0; }
 
-        /* サイドパネル (ショップ & ログ) */
-        #sidebar { width:360px; border-right:1px solid #222; background:#0a0a0a; display:flex; flex-direction:column; overflow-y:auto; padding:15px; }
-        .sec-title { border-left:4px solid var(--main); padding-left:10px; margin:20px 0 10px; color:#fff; font-weight:bold; letter-spacing:1px; }
-        .budget-card { background:#111; border:1px solid #222; padding:10px; margin-bottom:8px; position:relative; }
-        .budget-card b { font-size:13px; color:var(--main); }
-        .cost-val { color:#ffd700; font-weight:bold; font-size:11px; display:block; margin-top:5px; }
+        /* サイドパネル */
+        #sidebar { width:350px; border-right:1px solid #333; background:var(--panel); display:flex; flex-direction:column; padding:15px; overflow-y:auto; }
+        .user-tag { background:var(--sub); color:#000; padding:8px; font-weight:bold; margin-bottom:10px; font-size:14px; letter-spacing:1px; }
+        .budget-sec { margin-bottom: 20px; border-bottom: 1px solid #222; padding-bottom: 15px; }
+        .budget-sec h4 { color: #fff; margin: 10px 0; border-left: 3px solid var(--neon); padding-left: 8px; font-size:11px; }
+        
+        .item-box { background: #151515; padding:10px; margin-bottom: 8px; border: 1px solid #222; }
+        .cost { color: #ffd700; font-weight: bold; }
         
         /* ゲームビュー */
-        #viewport { flex-grow:1; display:flex; flex-direction:column; position:relative; background:#000; }
-        #canvas-wrap { position:relative; width:450px; height:700px; margin:auto; border:2px solid #1a1a1a; box-shadow:0 0 40px rgba(0,255,65,0.05); }
-        canvas { display:block; }
+        #viewport { flex-grow:1; display:flex; justify-content:center; align-items:center; position:relative; background:#000; }
+        #canvas-wrap { position:relative; width:450px; height:700px; border:2px solid #222; box-shadow:0 0 40px rgba(0,255,65,0.05); }
 
-        /* セクター切替UI */
-        .sector-btn { background:#111; color:var(--main); border:1px solid var(--main); padding:10px; margin:5px; cursor:pointer; width:100px; font-size:10px; transition:0.3s; }
-        .sector-btn:hover { background:var(--main); color:#000; }
-        .sector-btn.active { background:var(--main); color:#000; box-shadow:0 0 15px var(--main); }
+        /* ボタン・パーツ */
+        .btn-action { background:transparent; color:var(--neon); border:1px solid var(--neon); padding:8px; cursor:pointer; width:100%; margin-top:5px; font-family:inherit; }
+        .btn-action:hover:not(:disabled) { background:var(--neon); color:#000; }
+        .btn-action:disabled { color:#444; border-color:#444; cursor:default; }
+        
+        .sector-btn { background:#111; color:var(--neon); border:1px solid var(--neon); padding:8px; margin:3px; cursor:pointer; width:75px; font-size:9px; }
+        .sector-btn.active { background:var(--neon); color:#000; box-shadow:0 0 10px var(--neon); }
 
-        .btn-buy { background:var(--sub); color:#fff; border:none; padding:5px 10px; width:100%; cursor:pointer; margin-top:8px; font-size:11px; }
-        .btn-buy:disabled { background:#222; color:#555; }
-
-        /* ダミー画面 */
+        /* ダミー報告書 */
         #dummy { position:fixed; inset:0; background:#fff; color:#333; z-index:20000; display:none; padding:60px; font-family:serif; line-height:1.6; }
-        .log-stream { font-size:9px; color:var(--sub); height:120px; overflow:hidden; background:#000; padding:5px; border:1px solid #111; }
     </style>
 </head>
 <body>
 
+    <!-- 認証・ログイン -->
     <div id="auth-gate">
-        <div style="font-size:10px; margin-bottom:20px;">CRYPTO-SHIELD_V8_ACTIVE // AUTHORIZATION_REQUIRED</div>
-        <input type="password" id="pw" placeholder="ENTER_PRIVATE_KEY" autofocus>
+        <div class="login-box" id="login-step1">
+            <p>GSPR_NETWORK: 研究員IDを入力してください</p>
+            <input type="text" id="researcher-id" class="input-line" placeholder="RESEARCHER_NAME">
+            <button class="btn-action" onclick="toStep2()">ENTER_NAME</button>
+        </div>
+        <div class="login-box" id="login-step2" style="display:none;">
+            <p>SECURITY_KEY: 認証コードを入力</p>
+            <input type="password" id="pw" class="input-line">
+            <button class="btn-action" onclick="verifyLogin()">VERIFY_IDENTITY</button>
+        </div>
     </div>
 
+    <!-- 緊急回避ダミー -->
     <div id="dummy">
-        <h1>2026年度 物理特性シミュレーション解析中間報告書</h1>
+        <h1>国立物理研究所 予算執行およびシミュレーション解析報告書</h1>
         <hr>
-        <h3>1. 概要</h3>
-        <p>本プロジェクトでは、非線形弾性体における重力場干渉と、極限環境下での運動エネルギー保存則の整合性を検証する。特に Sector-03 (深海領域) における浮力の影響は...</p>
-        <div style="background:#eee; padding:20px; font-family:monospace;">
-            FOR EACH platform IN environment { platform.position += wind_vector * dt; }
-        </div>
+        <p>令和8年度における量子力学を応用した弾性体移動モデルの研究成果を以下の通り報告する。</p>
+        <table border="1" style="width:100%; border-collapse:collapse; background:white;">
+            <tr style="background:#ddd;"><td>分析セクター</td><td>重力係数</td><td>観測ステータス</td></tr>
+            <tr><td>SEC-01</td><td>0.45</td><td>正常</td></tr>
+            <tr><td>SEC-02</td><td>0.18</td><td>低重力環境</td></tr>
+        </table>
     </div>
 
+    <!-- サイドバー -->
     <div id="sidebar">
-        <div style="font-size:18px; color:#fff; border-bottom:1px solid var(--main); padding-bottom:10px;">GSPR_SYSTEM_CORE</div>
+        <div class="user-tag" id="user-display">ID: UNKNOWN</div>
         
-        <div class="budget-card" style="margin-top:15px; border-left:3px solid #ffd700;">
-            <small>CURRENT_AVAILABLE_BUDGET</small><br>
-            <span id="res-ui" style="font-size:22px; color:#ffd700;">0</span> <small>RC</small>
+        <div class="budget-sec" style="background:#000; padding:10px;">
+            TOTAL_CREDIT: <br>
+            <span id="res-ui" style="font-size:24px; color:#ffd700;">0</span> <small>RC</small>
         </div>
 
-        <div class="sec-title">RESEARCH_SECTORS</div>
-        <div style="display:flex; flex-wrap:wrap; justify-content:center;">
-            <button class="sector-btn active" id="sbtn-0" onclick="setSector(0)">SEC_01:LAB</button>
-            <button class="sector-btn" id="sbtn-1" onclick="setSector(1)">SEC_02:MOON</button>
-            <button class="sector-btn" id="sbtn-2" onclick="setSector(2)">SEC_03:DEEP</button>
-            <button class="sector-btn" id="sbtn-3" onclick="setSector(3)">SEC_04:NULL</button>
+        <div class="budget-sec">
+            <h4>[1] SECTOR_SELECT (物理環境切替)</h4>
+            <div style="display:flex; flex-wrap:wrap; justify-content:center;">
+                <button class="sector-btn active" id="sbtn-0" onclick="setSector(0)">LAB</button>
+                <button class="sector-btn" id="sbtn-1" onclick="setSector(1)">MOON</button>
+                <button class="sector-btn" id="sbtn-2" onclick="setSector(2)">DEEP</button>
+                <button class="sector-btn" id="sbtn-3" onclick="setSector(3)">NULL</button>
+            </div>
         </div>
 
-        <div class="sec-title">BUDGET_ALLOCATION (SHOP)</div>
-        
-        <div class="budget-card">
-            <b>[A] 消耗品: サンプル保存容器</b><br>
-            リソース獲得量 +50%<br>
-            <span class="cost-val">COST: 1,500 RC</span>
-            <button class="btn-buy" id="b-a1" onclick="buy('a1')">APPROVE</button>
+        <div class="budget-sec">
+            <h4>[2] LOW_COST_RESEARCH (消耗品)</h4>
+            <div class="item-box">
+                <b>分析効率化チップ (v1)</b><br>
+                獲得量 1.5倍 | <span class="cost">1,500 RC</span>
+                <button class="btn-action" id="b-a1" onclick="buy('a1')">APPROVE</button>
+            </div>
+            <div class="item-box">
+                <b>分子間反発エンジン (Lv.<span id="lv-j">1</span>)</b><br>
+                跳躍力向上 | <span class="cost"><span id="c-j">500</span> RC</span>
+                <button class="btn-action" onclick="buy('j')">UPGRADE</button>
+            </div>
         </div>
 
-        <div class="budget-card">
-            <b>[B] 設備: 粘性分子リアクター</b><br>
-            反発係数向上 Lv.<span id="lv-j">1</span><br>
-            <span class="cost-val">COST: <span id="c-j">500</span> RC</span>
-            <button class="btn-buy" onclick="buy('j')">APPROVE</button>
+        <div class="budget-sec">
+            <h4>[3] STRATEGIC_INVESTMENT (国家プロジェクト)</h4>
+            <div class="item-box">
+                <b>磁場展開大型コイル (磁力)</b><br>
+                全セクター対応 | <span class="cost">50,000 RC</span>
+                <button class="btn-action" id="b-b1" onclick="buy('b1')">APPROVE</button>
+            </div>
+            <div class="item-box">
+                <b>軌道エレベーター・システム</b><br>
+                無限リスポーン | <span class="cost">1,000,000 RC</span>
+                <button class="btn-action" id="b-s1" onclick="buy('s1')">APPROVE</button>
+            </div>
         </div>
-
-        <div class="budget-card">
-            <b>[S] 国家事業: 軌道エレベーター</b><br>
-            高度に関わらず無限リスポーン<br>
-            <span class="cost-val">COST: 10,000,000 RC</span>
-            <button class="btn-buy" id="b-s1" onclick="buy('s1')">APPROVE</button>
-        </div>
-
-        <div class="sec-title">LIVE_CALCULATION_LOG</div>
-        <div class="log-stream" id="logs"></div>
     </div>
 
+    <!-- メインビュー -->
     <div id="viewport">
         <div id="canvas-wrap">
             <canvas id="c"></canvas>
-            
             <div id="menu" style="position:absolute; inset:0; background:rgba(0,0,0,0.9); display:flex; flex-direction:column; align-items:center; justify-content:center;">
-                <h1 style="color:#fff; font-size:28px; letter-spacing:8px;">ANALYSIS_START</h1>
-                <div id="sector-info" style="font-size:11px; margin-bottom:20px; color:var(--main);">CURRENT: LAB_ENVIRONMENT</div>
-                <button class="sector-btn" style="width:220px; height:50px; font-size:16px;" onclick="start()">EXECUTE_SIM</button>
+                <h1 id="sector-title" style="color:#fff; font-size:24px; letter-spacing:4px;">LAB_ENVIRONMENT</h1>
+                <button class="btn-action" style="width:200px; height:50px; font-size:18px;" onclick="startSim()">EXECUTE_SIM</button>
             </div>
-
             <div id="hud" style="position:absolute; top:15px; left:15px; pointer-events:none; display:none;">
-                <div style="border-left:2px solid var(--main); padding-left:10px; background:rgba(0,0,0,0.5);">
-                    Y_POS: <span id="alt-ui" style="color:#fff;">0</span>m<br>
-                    LOCAL_RES: <span id="coins-ui" style="color:#ffd700;">0</span>
+                <div style="border-left:2px solid var(--neon); padding-left:10px; background:rgba(0,0,0,0.5);">
+                    ALT: <span id="alt-ui" style="color:#fff;">0</span>m<br>
+                    RES: <span id="coins-ui" style="color:#ffd700;">0</span>
                 </div>
             </div>
         </div>
@@ -120,142 +135,142 @@ const canvas = document.getElementById('c');
 const ctx = canvas.getContext('2d');
 canvas.width = 450; canvas.height = 700;
 
-let data = {
-    res: parseInt(localStorage.getItem('gs_res')) || 0,
-    lvJ: parseInt(localStorage.getItem('gs_lvj')) || 1,
-    a1: localStorage.getItem('gs_a1') === 'true',
-    s1: localStorage.getItem('gs_s1') === 'true',
-    sector: 0
-};
+let currentResearcher = "";
+let data = { res: 0, lvJ: 1, a1: false, b1: false, s1: false, sector: 0, best: 0 };
 
 const sectorParams = [
     { name: "LAB_ENVIRONMENT", g: 0.45, air: 0.85, jump: -14, bg: "#050505" },
-    { name: "LUNAR_BASE (LOW_G)", g: 0.15, air: 0.98, jump: -10, bg: "#0a0a10" },
-    { name: "DEEP_SEA (HIGH_PRESSURE)", g: 0.3, air: 0.6, jump: -18, bg: "#000510" },
+    { name: "LUNAR_BASE", g: 0.18, air: 0.98, jump: -10, bg: "#0a0a15" },
+    { name: "DEEP_SEA_ANALYSIS", g: 0.3, air: 0.6, jump: -18, bg: "#000510" },
     { name: "NULL_SINGULARITY", g: 0.8, air: 0.9, jump: -16, bg: "#000" }
 ];
 
-const state = { active: false, score: 0, coins: 0, platforms: [], items: [], particles: [] };
-const player = { x: 200, y: 500, vx: 0, dy: 0, sq: 1 };
-const keys = {};
-
-// 認証・緊急回避
-document.getElementById('pw').onkeypress = (e) => { if(e.key==='Enter' && e.target.value==='neba72') document.getElementById('auth-gate').style.display='none'; };
-window.onkeydown = (e) => { if(e.key==='Escape') { const d=document.getElementById('dummy'); d.style.display=(d.style.display==='none')?'block':'none'; } keys[e.code]=true; };
-window.onkeyup = (e) => keys[e.code] = false;
-
-function log(m) { 
-    const l = document.getElementById('logs');
-    l.innerHTML = `[${new Date().toLocaleTimeString()}] ${m}<br>` + l.innerHTML;
+// --- 認証・データ管理 ---
+function toStep2() {
+    const id = document.getElementById('researcher-id').value.trim();
+    if(id) { currentResearcher = id; document.getElementById('login-step1').style.display='none'; document.getElementById('login-step2').style.display='block'; }
 }
 
-function setSector(id) {
-    data.sector = id;
-    document.querySelectorAll('.sector-btn').forEach(b => b.classList.remove('active'));
-    document.getElementById(`sbtn-${id}`).classList.add('active');
-    document.getElementById('sector-info').innerText = `CURRENT: ${sectorParams[id].name}`;
-    log(`Environment changed to ${sectorParams[id].name}`);
-}
-
-function buy(id) {
-    let cost = 0;
-    if(id==='j') cost = data.lvJ * 500;
-    if(id==='a1') cost = 1500;
-    if(id==='s1') cost = 10000000;
-
-    if(data.res >= cost) {
-        data.res -= cost;
-        if(id==='j') data.lvJ++;
-        if(id==='a1') data.a1 = true;
-        if(id==='s1') data.s1 = true;
-        save(); updateUI(); log(`Project Approved: ${id}`);
+function verifyLogin() {
+    if(document.getElementById('pw').value === 'neba72') {
+        document.getElementById('auth-gate').style.display='none';
+        loadData();
     }
 }
 
-function save() {
-    localStorage.setItem('gs_res', data.res);
-    localStorage.setItem('gs_lvj', data.lvJ);
-    localStorage.setItem('gs_a1', data.a1);
-    localStorage.setItem('gs_s1', data.s1);
+function loadData() {
+    const saved = localStorage.getItem('gspr_v20_' + currentResearcher);
+    if(saved) data = JSON.parse(saved);
+    document.getElementById('user-display').innerText = `ID: ${currentResearcher}`;
+    updateUI();
 }
+
+function saveData() { localStorage.setItem('gspr_v20_' + currentResearcher, JSON.stringify(data)); }
 
 function updateUI() {
     document.getElementById('res-ui').innerText = data.res.toLocaleString();
     document.getElementById('lv-j').innerText = data.lvJ;
     document.getElementById('c-j').innerText = data.lvJ * 500;
     if(data.a1) document.getElementById('b-a1').disabled = true;
+    if(data.b1) document.getElementById('b-b1').disabled = true;
     if(data.s1) document.getElementById('b-s1').disabled = true;
+    setSector(data.sector);
 }
 
-function start() {
+function buy(id) {
+    let cost = 0;
+    if(id==='j') cost = data.lvJ * 500;
+    if(id==='a1') cost = 1500;
+    if(id==='b1') cost = 50000;
+    if(id==='s1') cost = 1000000;
+
+    if(data.res >= cost) {
+        data.res -= cost;
+        if(id==='j') data.lvJ++; else data[id] = true;
+        saveData(); updateUI();
+    }
+}
+
+function setSector(id) {
+    data.sector = id;
+    document.querySelectorAll('.sector-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById(`sbtn-${id}`).classList.add('active');
+    document.getElementById('sector-title').innerText = sectorParams[id].name;
+    saveData();
+}
+
+// --- ゲームエンジン ---
+const state = { active: false, score: 0, coins: 0, platforms: [], items: [] };
+const player = { x: 200, y: 550, vx: 0, dy: 0, sq: 1 };
+const keys = {};
+
+window.onkeydown = (e) => { 
+    if(e.key === 'Escape') { const d=document.getElementById('dummy'); d.style.display=(d.style.display==='none')?'block':'none'; }
+    keys[e.code] = true; 
+};
+window.onkeyup = (e) => keys[e.code] = false;
+
+function startSim() {
     document.getElementById('menu').style.display='none';
     document.getElementById('hud').style.display='block';
     state.active = true; state.score = 0; state.coins = 0;
     state.platforms = [{x:0, y:650, w:450, h:50, type:'base', s:0}];
-    for(let i=1; i<10; i++) state.platforms.push(genP(650-i*80));
+    for(let i=1; i<10; i++) state.platforms.push(genP(650-i*85));
     player.y = 550; player.dy = 0;
-    log("Simulation Initiated.");
 }
 
 function genP(y) {
-    let s = sectorParams[data.sector];
-    let w = (data.sector === 3) ? 40 : 80; // 特異点は足場が狭い
-    return { x: Math.random()*(450-w), y, w, h: 12, s: (Math.random()-0.5)*(state.score/500), type:'norm' };
+    let w = (data.sector === 3) ? 40 : Math.max(30, 85 - (state.score/400));
+    return { x: Math.random()*(450-w), y, w, h: 12, s: (Math.random()-0.5)*(state.score/600), type:'norm' };
 }
 
 function update() {
     if(!state.active) return;
     let s = sectorParams[data.sector];
 
-    // 入力・重力
     if(keys['ArrowLeft']) player.vx = -7; else if(keys['ArrowRight']) player.vx = 7; else player.vx *= s.air;
-    player.x += player.vx;
-    player.dy += s.g;
-    
-    // Sector 3 (深海) の浮力
-    if(data.sector === 2) player.dy -= 0.1; 
-
-    player.y += player.dy;
-    player.sq = player.dy < 0 ? 0.7 : 1.2;
+    player.x += player.vx; player.dy += s.g; player.y += player.dy;
+    player.sq = player.dy < 0 ? 0.75 : 1.2;
 
     if(player.x < -30) player.x = 430; if(player.x > 430) player.x = -30;
 
-    // 衝突判定
     if(player.dy > 0) {
         state.platforms.forEach(p => {
             p.x += p.s; if(p.x<0 || p.x+p.w > 450) p.s*=-1;
-            if(player.x+40 > p.x && player.x+10 < p.x+p.w && player.y+60 > p.y && player.y+60 < p.y+20) {
-                player.dy = (p.type==='base') ? -22 : s.jump - (data.lvJ * 0.3);
+            if(player.x+40 > p.x && player.x+10 < p.x+p.w && player.y+60 > p.y && player.y+60 < p.y+15) {
+                player.dy = (p.type==='base') ? -24 : s.jump - (data.lvJ * 0.4);
                 player.sq = 1.5;
             }
         });
     }
 
-    // コイン
     if(Math.random() < 0.03) state.items.push({x: Math.random()*430, y:-20});
     state.items.forEach((it, i) => {
         it.y += 3;
+        if(data.b1) { // 磁力
+            let dx = (player.x+25) - it.x, dy = (player.y+30) - it.y;
+            let d = Math.sqrt(dx*dx+dy*dy);
+            if(d < 200) { it.x += dx/10; it.y += dy/10; }
+        }
         if(Math.abs(player.x+25-it.x)<40 && Math.abs(player.y+30-it.y)<45) {
-            let gain = data.a1 ? 20 : 10;
-            state.coins += gain; state.items.splice(i,1);
+            state.coins += data.a1 ? 15 : 10; state.items.splice(i,1);
         }
     });
 
-    // カメラ移動
     if(player.y < 350) {
         let diff = 350 - player.y; player.y = 350;
-        state.score += Math.floor(diff);
+        state.score += Math.floor(diff/2);
         state.platforms.forEach(p => { p.y += diff; if(p.y>700) Object.assign(p, genP(-50)); });
         state.items.forEach(it => it.y += diff);
     }
 
     if(player.y > 750) {
-        if(data.s1) { player.y = 100; player.dy = 0; log("ORBITAL_RECOVERY."); }
+        if(data.s1) { player.y = 100; player.dy = 0; }
         else {
             state.active = false; data.res += state.coins;
-            save(); updateUI();
+            if(state.score > data.best) data.best = state.score;
+            saveData(); updateUI();
             document.getElementById('menu').style.display='flex';
-            log("Core Lost. Data Stored.");
         }
     }
 }
@@ -263,46 +278,27 @@ function update() {
 function draw() {
     let s = sectorParams[data.sector];
     ctx.fillStyle = s.bg; ctx.fillRect(0,0,450,700);
-    
-    // Sector別視覚効果
-    if(data.sector === 1) { // Moon
-        ctx.fillStyle = "rgba(255,255,255,0.05)";
-        for(let i=0; i<10; i++) ctx.fillRect(Math.random()*450, Math.random()*700, 2, 2);
-    }
-    if(data.sector === 3) { // Singularity
-        if(Math.random() < 0.1) { ctx.fillStyle = "rgba(0,255,65,0.1)"; ctx.fillRect(0,0,450,700); }
-    }
+    ctx.strokeStyle = "rgba(0,255,65,0.05)";
+    for(let i=0; i<450; i+=50) { ctx.beginPath(); ctx.moveTo(i,0); ctx.lineTo(i,700); ctx.stroke(); }
 
-    // 足場描画
     state.platforms.forEach(p => {
-        ctx.strokeStyle = varProp('--main'); ctx.lineWidth = 1;
-        ctx.strokeRect(p.x, p.y, p.w, p.h);
-        ctx.fillStyle = (p.type==='base') ? varProp('--main') : "rgba(0,255,65,0.1)";
+        ctx.fillStyle = p.type==='base' ? "var(--neon)" : "#222";
         ctx.fillRect(p.x, p.y, p.w, p.h);
     });
-
-    // アイテム
     state.items.forEach(it => {
         ctx.fillStyle = "#ffd700"; ctx.beginPath(); ctx.arc(it.x, it.y, 6, 0, 7); ctx.fill();
     });
 
-    // キャラクター (ワイヤーフレーム納豆)
-    ctx.save();
-    ctx.translate(player.x+25, player.y+60);
-    ctx.scale(1/player.sq, player.sq);
-    ctx.strokeStyle = "#fff"; ctx.lineWidth = 2;
-    ctx.strokeRect(-25, -60, 50, 60);
-    ctx.fillStyle = "#8d6e63"; ctx.fillRect(-23, -58, 46, 56);
-    ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.arc(-10,-45,5,0,7); ctx.arc(10,-45,5,0,7); ctx.fill();
+    ctx.save(); ctx.translate(player.x+25, player.y+60); ctx.scale(1/player.sq, player.sq);
+    ctx.fillStyle = "#8d6e63"; ctx.beginPath(); ctx.roundRect(-25,-60,50,60,8); ctx.fill();
     ctx.restore();
 
     document.getElementById('alt-ui').innerText = state.score;
     document.getElementById('coins-ui').innerText = state.coins;
 }
 
-function varProp(n) { return getComputedStyle(document.documentElement).getPropertyValue(n).trim(); }
 function loop() { update(); draw(); requestAnimationFrame(loop); }
-updateUI(); loop();
+loop();
 </script>
 </body>
 </html>
